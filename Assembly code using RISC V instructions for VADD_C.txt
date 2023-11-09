@@ -1,0 +1,74 @@
+//vadd.c
+// Base program for CPU0.s
+
+#define ARRAY_A_ADDR 0x0400
+#define ARRAY_B_ADDR 0x0800
+#define ARRAY_C_ADDR 0x0C00
+
+float * ARRAY_A = (float *)(void *)ARRAY_A_ADDR;
+float * ARRAY_B = (float *)(void *)ARRAY_B_ADDR;
+float * ARRAY_C = (float *)(void *)ARRAY_C_ADDR;
+
+int main() {
+	int i;
+	for (i=0; i<256; i++) {
+		ARRAY_C[i] = ARRAY_A[i] + ARRAY_B[i];
+	}
+}
+
+Assembly code:
+.section .data
+    array_a: .word 0x0400
+    array_b: .word 0x0800
+    array_c: .word 0x0C00
+    count: .word 256
+    size_of_float: .word 4 # Size of a float (4 bytes)
+    zero_word: .word 0
+
+.section .text
+    .globl main
+main:
+    # Load base addresses of arrays into registers
+    lw r0, array_a    # r0 = address of ARRAY_A
+    lw r1, array_b    # r1 = address of ARRAY_B
+    lw r2, array_c    # r2 = address of ARRAY_C
+
+    # Initialize loop index i to 0
+    lw r3, zero_word  # r3 = 0 (loop index)
+
+    # Load loop count (256) into r4
+    lw r4, count
+
+    # Load the size of a float into r8
+    lw r8, size_of_float
+
+loop:
+    # Check if loop index is less than count (256)
+    blt r3, r4, loop_body
+    j end_loop
+
+loop_body:
+    # Load values from ARRAY_A[i] and ARRAY_B[i]
+    flw f0, 0(r0)     # Load ARRAY_A[i] into f0
+    flw f1, 0(r1)     # Load ARRAY_B[i] into f1
+
+    # Add values in f0 and f1
+    fadd.s f2, f0, f1 # f2 = f0 + f1
+
+    # Store result into ARRAY_C[i]
+    fsw f2, 0(r2)     # Store f2 into ARRAY_C[i]
+
+    # Increment array pointers by the size of a float (4 bytes)
+    add r0, r0, r8    # ARRAY_A pointer += size of float
+    add r1, r1, r8    # ARRAY_B pointer += size of float
+    add r2, r2, r8    # ARRAY_C pointer += size of float
+
+    # Increment loop index
+    addi r3, r3, 1    # i = i + 1
+
+    # Loop back to the condition check
+    j loop
+
+end_loop:
+    # Exit from main
+    ret
